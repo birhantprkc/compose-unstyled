@@ -118,6 +118,12 @@ private val availablePrimitives = listOf(
     previewOptions = PreviewOptions(padding = PaddingValues(0.dp)),
   ),
   DemoItem(
+    "Drawer Nested Scroll",
+    "drawer-nested-scroll",
+    { DrawerNestedScrollDemo() },
+    previewOptions = PreviewOptions(padding = PaddingValues(0.dp)),
+  ),
+  DemoItem(
     "Drawer Side",
     "drawer-side",
     { DrawerSideDemo() },

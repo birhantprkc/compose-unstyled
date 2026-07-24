@@ -22,6 +22,7 @@
 package com.composeunstyled
 
 import androidx.compose.foundation.OverscrollEffect
+import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
@@ -48,12 +49,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import kotlinx.coroutines.CoroutineScope
@@ -61,6 +67,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.jvm.JvmInline
+import kotlin.jvm.JvmName
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -328,15 +335,24 @@ class DrawerState internal constructor(
       return if (side.isLeadingEdge) {
         0f
       } else {
-        viewportMainAxisSizePx
+        viewportMainAxisSizePx + hiddenTrailingEdgeOffsetPx(visiblePanelSizePx = 0f)
       }
     }
 
     return if (side.isLeadingEdge) {
       visiblePanelSizePx() - panelSizePx
     } else {
-      (viewportMainAxisSizePx - visiblePanelSizePx()).coerceIn(0f, viewportMainAxisSizePx)
+      val visiblePanelSizePx = visiblePanelSizePx()
+      (viewportMainAxisSizePx - visiblePanelSizePx).coerceIn(0f, viewportMainAxisSizePx) +
+        hiddenTrailingEdgeOffsetPx(visiblePanelSizePx)
     }
+  }
+
+  private fun hiddenTrailingEdgeOffsetPx(visiblePanelSizePx: Float): Float {
+    if (visiblePanelSizePx > 0.5f) return 0f
+    if (isIdle.not()) return 0f
+
+    return panelSizePx.takeIf { it.isNaN().not() } ?: 0f
   }
 
   private fun updateAnchors(newTarget: DrawerSnapPoint? = null) {
@@ -518,13 +534,15 @@ fun DrawerScope.Viewport(
     layout(width, height) {
       val panelMainAxisOffset =
         drawerState.panelMainAxisOffsetPx(side, containerMainAxisSizePx).roundToInt()
+      val trailingEdgeOverflow = drawerState.trailingEdgeOverflowPx(containerMainAxisSizePx)
+        .roundToInt()
       placeables.forEach { placeable ->
         if (side.isHorizontal) {
           val coercionOffset = placeable.mainAxisCoercionOffset(side)
           val x = if (side.isLeadingEdge) {
             panelMainAxisOffset
           } else {
-            panelMainAxisOffset - coercionOffset
+            panelMainAxisOffset - maxOf(coercionOffset, trailingEdgeOverflow)
           }
           placeable.placeRelative(x, 0)
         } else {
@@ -532,7 +550,7 @@ fun DrawerScope.Viewport(
           val y = if (side.isLeadingEdge) {
             panelMainAxisOffset
           } else {
-            panelMainAxisOffset - coercionOffset
+            panelMainAxisOffset - maxOf(coercionOffset, trailingEdgeOverflow)
           }
           placeable.placeRelative(0, y)
         }
@@ -561,6 +579,9 @@ fun DrawerViewportScope.Panel(
   val panelOverscrollVisualEffect = remember(overscrollEffect) {
     overscrollEffect?.withoutEventHandling()
   }
+  val panelContainerMainAxisSize = state?.containerSizePx
+    ?.takeIf { it.isNaN().not() }
+    ?.roundToInt()
   Layout(
     modifier = buildModifier {
       if (panelOverscrollVisualEffect != null) {
@@ -574,19 +595,36 @@ fun DrawerViewportScope.Panel(
           (state.snapPoints.size > 1 || panelOverscrollEffect != null)
         ) {
           add(
-            Modifier.anchoredDraggable(
-              state = state.anchoredDraggableState,
-              orientation = orientation,
-              enabled = context.enabled,
-              interactionSource = context.interactionSource,
-              overscrollEffect = panelOverscrollEffect,
-            ),
+            Modifier
+              .anchoredDraggable(
+                state = state.anchoredDraggableState,
+                orientation = orientation,
+                enabled = context.enabled,
+                interactionSource = context.interactionSource,
+                overscrollEffect = panelOverscrollEffect,
+              )
+              .nestedScroll(
+                remember(state.anchoredDraggableState, orientation, side) {
+                  ConsumeSwipeWithinDrawerBoundsNestedScrollConnection(
+                    drawerState = state.anchoredDraggableState,
+                    orientation = orientation,
+                    side = side,
+                  )
+                },
+              ),
           )
         }
       },
     ),
     content = {
-      Box(modifier) {
+      PanelContentLayout(
+        modifier = modifier,
+        side = side,
+        containerMainAxisSize = panelContainerMainAxisSize,
+        onMainAxisSizeMeasured = { measuredSize ->
+          state?.updatePanelSize(measuredSize.toFloat())
+        },
+      ) {
         DrawerPanelScope().content()
       }
     },
@@ -599,17 +637,13 @@ fun DrawerViewportScope.Panel(
       state.panelSizePx <= containerMainAxisSize
     val contentConstraints = if (side.isHorizontal) {
       val maxWidth = constraints.maxWidth.takeIf { maxWidth ->
-        maxWidth != Constraints.Infinity &&
-          containerMainAxisSize != null &&
-          maxWidth < containerMainAxisSize
+        maxWidth != Constraints.Infinity
       } ?: containerMainAxisSize.takeIf { canUseContainerMax }
         ?: Constraints.Infinity
       constraints.copy(minWidth = 0, maxWidth = maxWidth)
     } else {
       val maxHeight = constraints.maxHeight.takeIf { maxHeight ->
-        maxHeight != Constraints.Infinity &&
-          containerMainAxisSize != null &&
-          maxHeight < containerMainAxisSize
+        maxHeight != Constraints.Infinity
       } ?: containerMainAxisSize.takeIf { canUseContainerMax }
         ?: Constraints.Infinity
       constraints.copy(minHeight = 0, maxHeight = maxHeight)
@@ -617,9 +651,13 @@ fun DrawerViewportScope.Panel(
     val placeables = measurables.map { measurable ->
       measurable.measure(contentConstraints)
     }
-    val panelMainAxisSize = placeables.maxOfOrNull { placeable ->
+    val coercedPanelMainAxisSize = placeables.maxOfOrNull { placeable ->
       placeable.mainAxisSize(side)
     } ?: 0
+    val panelMainAxisSize = state?.panelSizePx
+      ?.takeIf { it.isNaN().not() }
+      ?.roundToInt()
+      ?: coercedPanelMainAxisSize
     state?.updatePanelSize(panelMainAxisSize.toFloat())
 
     val width = if (side.isHorizontal) {
@@ -657,6 +695,75 @@ fun DrawerViewportScope.Panel(
   }
 }
 
+@Composable
+private fun PanelContentLayout(
+  modifier: Modifier,
+  side: DrawerSide,
+  containerMainAxisSize: Int?,
+  onMainAxisSizeMeasured: (Int) -> Unit,
+  content: @Composable () -> Unit,
+) {
+  Layout(
+    modifier = modifier,
+    content = content,
+  ) { measurables, constraints ->
+    val mainAxisMinSize: Int
+    val mainAxisMaxSize: Int
+    if (side.isHorizontal) {
+      mainAxisMinSize = constraints.minWidth
+      mainAxisMaxSize = constraints.maxWidth
+    } else {
+      mainAxisMinSize = constraints.minHeight
+      mainAxisMaxSize = constraints.maxHeight
+    }
+    val fixedMainAxisSize = mainAxisMinSize == mainAxisMaxSize
+    val explicitlyConstrainedMainAxis = containerMainAxisSize != null &&
+      mainAxisMaxSize != Constraints.Infinity &&
+      mainAxisMaxSize < containerMainAxisSize
+    val childConstraints = if (fixedMainAxisSize) {
+      constraints
+    } else if (explicitlyConstrainedMainAxis) {
+      constraints
+    } else if (side.isHorizontal) {
+      constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)
+    } else {
+      constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
+    }
+    val placeables = measurables.map { measurable ->
+      measurable.measure(childConstraints)
+    }
+    val width = if (side.isHorizontal && fixedMainAxisSize.not()) {
+      placeables.maxOfOrNull { placeable -> placeable.measuredWidth } ?: constraints.minWidth
+    } else {
+      maxOf(
+        constraints.minWidth,
+        placeables.maxOfOrNull { placeable -> placeable.width } ?: 0,
+      )
+    }
+    val height = if (side.isHorizontal.not() && fixedMainAxisSize.not()) {
+      placeables.maxOfOrNull { placeable -> placeable.measuredHeight } ?: constraints.minHeight
+    } else {
+      maxOf(
+        constraints.minHeight,
+        placeables.maxOfOrNull { placeable -> placeable.height } ?: 0,
+      )
+    }
+    onMainAxisSizeMeasured(
+      if (side.isHorizontal) {
+        width
+      } else {
+        height
+      },
+    )
+
+    layout(width, height) {
+      placeables.forEach { placeable ->
+        placeable.placeRelative(0, 0)
+      }
+    }
+  }
+}
+
 private fun Placeable.mainAxisSize(side: DrawerSide): Int {
   return if (side.isHorizontal) {
     measuredWidth
@@ -673,6 +780,94 @@ private fun Placeable.mainAxisCoercionOffset(side: DrawerSide): Int {
   } else {
     measuredHeight - height
   }.coerceAtLeast(0) / 2
+}
+
+private fun DrawerState.trailingEdgeOverflowPx(viewportMainAxisSizePx: Float): Float {
+  if (isAnchoredToMinEdge) return 0f
+
+  val panelOverflow = panelSizePx - viewportMainAxisSizePx
+  if (panelOverflow <= 0f) return 0f
+
+  return if (abs(visiblePanelSizePx() - viewportMainAxisSizePx) < 0.5f) {
+    panelOverflow
+  } else {
+    0f
+  }
+}
+
+private fun ConsumeSwipeWithinDrawerBoundsNestedScrollConnection(
+  drawerState: AnchoredDraggableState<DrawerSnapPoint>,
+  orientation: Orientation,
+  side: DrawerSide,
+): NestedScrollConnection = object : NestedScrollConnection {
+  override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+    val delta = available.toFloat(orientation)
+    return if (source == NestedScrollSource.UserInput && side.isOpeningDelta(delta)) {
+      drawerState.dispatchRawDelta(delta).toOffset(orientation)
+    } else {
+      Offset.Zero
+    }
+  }
+
+  override fun onPostScroll(
+    consumed: Offset,
+    available: Offset,
+    source: NestedScrollSource,
+  ): Offset {
+    return if (source == NestedScrollSource.UserInput) {
+      drawerState.dispatchRawDelta(available.toFloat(orientation)).toOffset(orientation)
+    } else {
+      Offset.Zero
+    }
+  }
+
+  override suspend fun onPreFling(available: Velocity): Velocity {
+    val velocity = available.toFloat(orientation)
+    val currentOffset = drawerState.requireOffset()
+    val minAnchor = drawerState.anchors.minPosition()
+    val maxAnchor = drawerState.anchors.maxPosition()
+    val canMoveTowardOpen = if (side.isLeadingEdge) {
+      currentOffset < maxAnchor
+    } else {
+      currentOffset > minAnchor
+    }
+    return if (side.isOpeningDelta(velocity) && canMoveTowardOpen) {
+      drawerState.settle(AnchoredDraggableDefaults.SnapAnimationSpec)
+      available
+    } else {
+      Velocity.Zero
+    }
+  }
+
+  override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+    drawerState.settle(AnchoredDraggableDefaults.SnapAnimationSpec)
+    return available
+  }
+}
+
+private fun DrawerSide.isOpeningDelta(delta: Float): Boolean {
+  return if (isLeadingEdge) {
+    delta > 0
+  } else {
+    delta < 0
+  }
+}
+
+private fun Float.toOffset(orientation: Orientation): Offset {
+  return Offset(
+    x = if (orientation == Orientation.Horizontal) this else 0f,
+    y = if (orientation == Orientation.Vertical) this else 0f,
+  )
+}
+
+@JvmName("velocityToFloat")
+private fun Velocity.toFloat(orientation: Orientation): Float {
+  return if (orientation == Orientation.Horizontal) x else y
+}
+
+@JvmName("offsetToFloat")
+private fun Offset.toFloat(orientation: Orientation): Float {
+  return if (orientation == Orientation.Horizontal) x else y
 }
 
 private val DrawerSide.isHorizontal: Boolean

@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -49,11 +50,13 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isLessThan
 import kotlin.math.roundToInt
 import kotlin.test.Test
@@ -73,7 +76,9 @@ class DrawerTest {
 
     assertThat(viewportBounds.width.roundToInt()).isEqualTo(100)
     assertThat(viewportBounds.height.roundToInt()).isEqualTo(100)
-    assertThat(panelBounds.top.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
+    assertThat(panelBounds.top.roundToInt()).isEqualTo(
+      viewportBounds.bottom.roundToInt() + panelBounds.height.roundToInt(),
+    )
     assertThat(panelBounds.height.roundToInt()).isEqualTo(100)
   }
 
@@ -445,6 +450,43 @@ class DrawerTest {
   }
 
   @Test
+  fun endDrawerWithFullSizePanelIsFullyPastViewportWhenClosed() = runComposeUiTest {
+    setContent {
+      val state = rememberDrawerState(
+        initialSnapPoint = DrawerSnapPoint.Closed,
+      )
+      UnstyledDrawer(
+        state = state,
+        side = DrawerSide.End,
+        modifier = Modifier.size(100.dp),
+      ) {
+        Viewport(
+          modifier = Modifier
+            .size(100.dp)
+            .testTag("viewport"),
+        ) {
+          Panel(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("panel"),
+          ) {
+            Box(Modifier.size(20.dp))
+          }
+        }
+      }
+    }
+
+    waitForIdle()
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+
+    assertThat(panelBounds.left.roundToInt()).isEqualTo(
+      viewportBounds.right.roundToInt() + panelBounds.width.roundToInt(),
+    )
+  }
+
+  @Test
   fun bottomDrawerContentCanFillExplicitPanelHeight() = runComposeUiTest {
     setContent {
       FixedHeightBottomDrawerLayout()
@@ -454,6 +496,92 @@ class DrawerTest {
 
     assertThat(onNodeWithTag("panel").boundsInRoot().height.roundToInt()).isEqualTo(100)
     assertThat(onNodeWithTag("content").boundsInRoot().height.roundToInt()).isEqualTo(100)
+  }
+
+  @Test
+  fun bottomDrawerWithFullSizePanelIsFullyPastViewportWhenClosed() = runComposeUiTest {
+    setContent {
+      val state = rememberDrawerState(
+        initialSnapPoint = DrawerSnapPoint.Closed,
+      )
+      UnstyledDrawer(
+        state = state,
+        side = DrawerSide.Bottom,
+        modifier = Modifier.size(100.dp),
+      ) {
+        Viewport(
+          modifier = Modifier
+            .size(100.dp)
+            .testTag("viewport"),
+        ) {
+          Panel(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("panel"),
+          ) {
+            Box(Modifier.size(20.dp))
+          }
+        }
+      }
+    }
+
+    waitForIdle()
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+
+    assertThat(panelBounds.top.roundToInt()).isEqualTo(
+      viewportBounds.bottom.roundToInt() + panelBounds.height.roundToInt(),
+    )
+  }
+
+  @Test
+  fun bottomDrawerOpeningFromClosedMovesContinuously() = runComposeUiTest {
+    lateinit var state: DrawerState
+
+    setContent {
+      state = rememberDrawerState(
+        initialSnapPoint = DrawerSnapPoint.Closed,
+      )
+      UnstyledDrawer(
+        state = state,
+        side = DrawerSide.Bottom,
+        modifier = Modifier.size(100.dp),
+      ) {
+        Viewport(
+          modifier = Modifier
+            .size(100.dp)
+            .testTag("viewport"),
+        ) {
+          Panel(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("panel"),
+          ) {
+            Box(Modifier.size(20.dp))
+          }
+        }
+      }
+    }
+
+    waitForIdle()
+    mainClock.autoAdvance = false
+
+    try {
+      runOnIdle {
+        state.targetSnapPoint = DrawerSnapPoint.Open
+      }
+      mainClock.advanceTimeBy(100)
+      waitForIdle()
+
+      val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+      val panelBounds = onNodeWithTag("panel").boundsInRoot()
+
+      assertThat(panelBounds.top).isLessThan(viewportBounds.bottom)
+      assertThat(panelBounds.top).isGreaterThan(viewportBounds.top)
+    } finally {
+      mainClock.autoAdvance = true
+    }
   }
 
   @Test
@@ -1055,6 +1183,65 @@ class DrawerTest {
     waitForIdle()
 
     assertThat(overscrollEffect.totalOverscrollY).isLessThan(0f)
+  }
+
+  @Test
+  fun bottomDrawerExpandsBeforeScrollingLazyContent() = runComposeUiTest {
+    val peek = DrawerSnapPoint("peek") { containerSize, _ ->
+      containerSize * 0.5f
+    }
+    lateinit var state: DrawerState
+
+    setContent {
+      state = rememberDrawerState(
+        initialSnapPoint = peek,
+        snapPoints = {
+          listOf(peek, DrawerSnapPoint.Open)
+        },
+      )
+
+      UnstyledDrawer(
+        state = state,
+        side = DrawerSide.Bottom,
+        modifier = Modifier.size(100.dp),
+      ) {
+        Viewport(
+          modifier = Modifier
+            .size(100.dp)
+            .testTag("viewport"),
+        ) {
+          Panel(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("panel"),
+          ) {
+            LazyColumn(
+              modifier = Modifier
+                .fillMaxSize()
+                .testTag("lazy_content"),
+            ) {
+              items(20) { index ->
+                Box(
+                  Modifier
+                    .testTag("item_$index")
+                    .fillMaxWidth()
+                    .height(30.dp),
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+
+    waitForIdle()
+
+    onNodeWithTag("lazy_content").performTouchInput {
+      swipeUp()
+    }
+    waitForIdle()
+
+    assertThat(state.currentSnapPoint).isEqualTo(DrawerSnapPoint.Open)
   }
 
   private fun SemanticsNodeInteraction.boundsInRoot(): Rect {
