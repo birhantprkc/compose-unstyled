@@ -21,23 +21,18 @@
  */
 package com.composeunstyled.demo
 
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -49,7 +44,6 @@ import androidx.compose.ui.unit.sp
 import com.composeunstyled.DrawerSide
 import com.composeunstyled.DrawerSnapPoint
 import com.composeunstyled.Panel
-import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledDrawer
 import com.composeunstyled.Viewport
 import com.composeunstyled.rememberDrawerState
@@ -58,22 +52,8 @@ import com.composeunstyled.rememberDrawerState
 fun DrawerOverscrollEffectDemo() {
   val drawerState = rememberDrawerState(
     initialSnapPoint = DrawerSnapPoint.Open,
+    snapPoints = { listOf(DrawerSnapPoint.Open) }
   )
-
-  UnstyledButton(
-    onClick = {
-      drawerState.targetSnapPoint = DrawerSnapPoint.Open
-    },
-    modifier = Modifier
-      .clip(RoundedCornerShape(10.dp))
-      .heightIn(32.dp)
-      .background(Color(0xFFF8FAFC))
-      .border(1.dp, Color(0xFFCACACA), RoundedCornerShape(10.dp)),
-    contentPadding = PaddingValues(horizontal = 10.dp),
-    indication = LocalIndication.current,
-  ) {
-    BasicText("Open drawer")
-  }
 
   UnstyledDrawer(
     state = drawerState,
@@ -107,7 +87,7 @@ fun DrawerOverscrollEffectDemo() {
           verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
           BasicText("Try dragging me upwards", style = TextStyle(fontSize = 22.sp))
-          BasicText("I bet you can't")
+          BasicText("The drawer is locked in place with an overscroll effect")
         }
       }
     }
