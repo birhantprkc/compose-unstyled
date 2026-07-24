@@ -52,7 +52,7 @@ import com.composeunstyled.rememberDrawerState
 fun DrawerOverscrollEffectDemo() {
   val drawerState = rememberDrawerState(
     initialSnapPoint = DrawerSnapPoint.Open,
-    snapPoints = { listOf(DrawerSnapPoint.Open) }
+    snapPoints = { listOf(DrawerSnapPoint.Open) },
   )
 
   UnstyledDrawer(

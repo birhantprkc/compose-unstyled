@@ -568,7 +568,11 @@ fun DrawerViewportScope.Panel(
       }
     }.then(
       buildModifier {
-        if (state != null && context.enabled && state.snapPoints.size > 1) {
+        if (
+          state != null &&
+          context.enabled &&
+          (state.snapPoints.size > 1 || panelOverscrollEffect != null)
+        ) {
           add(
             Modifier.anchoredDraggable(
               state = state.anchoredDraggableState,

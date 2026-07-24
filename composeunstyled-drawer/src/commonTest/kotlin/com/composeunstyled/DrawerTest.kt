@@ -1035,6 +1035,28 @@ class DrawerTest {
     assertThat(overscrollEffect.totalOverscrollY).isLessThan(0f)
   }
 
+  @Test
+  fun lockedPanelDispatchesExcessDragToOverscrollEffect() = runComposeUiTest {
+    val overscrollEffect = RecordingOverscrollEffect()
+
+    setContent {
+      DrawerLayout(
+        initialSnapPoint = DrawerSnapPoint.Open,
+        snapPoints = listOf(DrawerSnapPoint.Open),
+        overscrollEffect = overscrollEffect,
+      )
+    }
+
+    waitForIdle()
+
+    onNodeWithTag("panel").performTouchInput {
+      swipe(start = center, end = topCenter)
+    }
+    waitForIdle()
+
+    assertThat(overscrollEffect.totalOverscrollY).isLessThan(0f)
+  }
+
   private fun SemanticsNodeInteraction.boundsInRoot(): Rect {
     return fetchSemanticsNode().boundsInRoot
   }
