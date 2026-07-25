@@ -102,4 +102,40 @@ class DrawerAndroidTest {
     assertThat(fallbackBackHandlerCalled).isEqualTo(true)
     assertThat(state.currentSnapPoint).isEqualTo(DrawerSnapPoint.Open)
   }
+
+  @Test
+  fun pressingBackDoesNotCloseDrawerWhenDismissOnNavigateBackIsFalse() = runComposeUiTest {
+    lateinit var state: DrawerState
+    var fallbackBackHandlerCalled = false
+
+    setContent {
+      EscapeHandler {
+        fallbackBackHandlerCalled = true
+      }
+      state = rememberDrawerState(
+        initialSnapPoint = DrawerSnapPoint.Open,
+      )
+      UnstyledDrawer(
+        state = state,
+        properties = DrawerProperties(dismissOnNavigateBack = false),
+        modifier = Modifier.size(100.dp),
+      ) {
+        Viewport(
+          modifier = Modifier.size(100.dp),
+        ) {
+          Panel(
+            modifier = Modifier.fillMaxWidth(),
+          ) {
+            Box(Modifier.fillMaxWidth().height(100.dp))
+          }
+        }
+      }
+    }
+
+    Espresso.pressBack()
+    waitForIdle()
+
+    assertThat(fallbackBackHandlerCalled).isEqualTo(true)
+    assertThat(state.currentSnapPoint).isEqualTo(DrawerSnapPoint.Open)
+  }
 }

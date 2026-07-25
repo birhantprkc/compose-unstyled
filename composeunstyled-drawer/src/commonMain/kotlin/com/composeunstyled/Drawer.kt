@@ -444,6 +444,10 @@ class DrawerViewportScope internal constructor()
 
 class DrawerPanelScope internal constructor()
 
+data class DrawerProperties(
+  val dismissOnNavigateBack: Boolean = true,
+)
+
 private class DrawerContext(
   internal val state: DrawerState? = null,
   internal val side: DrawerSide = DrawerSide.Bottom,
@@ -462,10 +466,12 @@ fun UnstyledDrawer(
   modifier: Modifier = Modifier,
   side: DrawerSide = DrawerSide.Start,
   enabled: Boolean = true,
+  properties: DrawerProperties = DrawerProperties(),
   content: @Composable DrawerScope.() -> Unit,
 ) {
   if (
     enabled &&
+    properties.dismissOnNavigateBack &&
     state.snapPoints.contains(DrawerSnapPoint.Closed) &&
     (
       state.currentSnapPoint != DrawerSnapPoint.Closed ||
