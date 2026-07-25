@@ -112,6 +112,12 @@ private val availablePrimitives = listOf(
     previewOptions = PreviewOptions(padding = PaddingValues(0.dp)),
   ),
   DemoItem(
+    "Drawer Dynamic Content Size",
+    "drawer-dynamic-content-size",
+    { DrawerDynamicContentSizeDemo() },
+    previewOptions = PreviewOptions(padding = PaddingValues(0.dp)),
+  ),
+  DemoItem(
     "Drawer Overscroll Effect",
     "drawer-overscroll-effect",
     { DrawerOverscrollEffectDemo() },
