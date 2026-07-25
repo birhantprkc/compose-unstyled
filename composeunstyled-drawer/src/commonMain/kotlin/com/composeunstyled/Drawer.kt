@@ -651,6 +651,7 @@ fun DrawerViewportScope.Panel(
         modifier = modifier,
         side = side,
         containerMainAxisSize = panelContainerMainAxisSize,
+        targetSnapPoint = state?.targetSnapPoint,
         targetVisibleMainAxisSize = state?.targetVisiblePanelSizePx()
           ?.takeIf { it.isNaN().not() }
           ?.roundToInt(),
@@ -688,10 +689,7 @@ fun DrawerViewportScope.Panel(
     val coercedPanelMainAxisSize = placeables.maxOfOrNull { placeable ->
       placeable.mainAxisSize(side)
     } ?: 0
-    val panelMainAxisSize = state?.panelSizePx
-      ?.takeIf { it.isNaN().not() }
-      ?.roundToInt()
-      ?: coercedPanelMainAxisSize
+    val panelMainAxisSize = coercedPanelMainAxisSize
     state?.updatePanelSize(panelMainAxisSize.toFloat())
 
     val width = if (side.isHorizontal) {
@@ -734,6 +732,7 @@ private fun PanelContentLayout(
   modifier: Modifier,
   side: DrawerSide,
   containerMainAxisSize: Int?,
+  targetSnapPoint: DrawerSnapPoint?,
   targetVisibleMainAxisSize: Int?,
   measureContentBeyondViewportBounds: Boolean,
   onMainAxisSizeMeasured: (Int) -> Unit,
@@ -758,7 +757,9 @@ private fun PanelContentLayout(
       mainAxisMaxSize < containerMainAxisSize
     val shouldBoundToVisibleSize = measureContentBeyondViewportBounds.not() &&
       containerMainAxisSize != null &&
+      targetSnapPoint != DrawerSnapPoint.Open &&
       targetVisibleMainAxisSize != null &&
+      targetVisibleMainAxisSize > 0 &&
       targetVisibleMainAxisSize < containerMainAxisSize
     val childConstraints = if (fixedMainAxisSize) {
       constraints

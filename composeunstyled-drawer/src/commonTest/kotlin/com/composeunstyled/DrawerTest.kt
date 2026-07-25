@@ -52,10 +52,12 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.test.swipe
@@ -690,6 +692,155 @@ class DrawerTest {
     assertThat(panelBounds.top.roundToInt()).isEqualTo(viewportBounds.top.roundToInt())
     assertThat(panelBounds.bottom.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
     assertThat(panelBounds.height.roundToInt()).isEqualTo(viewportBounds.height.roundToInt())
+  }
+
+  @Test
+  fun bottomDrawerKeepsScrollableColumnWithoutFixedSizeBoundedToVisibleHeight() = runComposeUiTest {
+    var itemCount by mutableStateOf(0)
+
+    setContent {
+      Box(
+        Modifier
+          .requiredSize(400.dp)
+          .testTag("root"),
+      ) {
+        val state = rememberDrawerState(
+          initialSnapPoint = DrawerSnapPoint.Open,
+          snapPoints = {
+            listOf(DrawerSnapPoint.Open)
+          },
+        )
+
+        UnstyledDrawer(
+          state = state,
+          side = DrawerSide.Bottom,
+          modifier = Modifier.fillMaxSize(),
+        ) {
+          Viewport(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("viewport"),
+          ) {
+            Panel(
+              modifier = Modifier
+                .fillMaxWidth()
+                .testTag("panel"),
+            ) {
+              Column(
+                Modifier
+                  .fillMaxWidth()
+                  .verticalScroll(rememberScrollState())
+                  .testTag("scrollable_content"),
+              ) {
+                repeat(itemCount) { index ->
+                  BasicText(
+                    text = "item_$index",
+                    modifier = Modifier
+                      .testTag("item_$index")
+                      .fillMaxWidth()
+                      .height(100.dp),
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    runOnIdle {
+      itemCount = 8
+    }
+
+    waitUntil {
+      onNodeWithTag("panel").boundsInRoot().height.roundToInt() == 400
+    }
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+    val scrollableContentBounds = onNodeWithTag("scrollable_content").boundsInRoot()
+
+    assertThat(panelBounds.top.roundToInt()).isEqualTo(viewportBounds.top.roundToInt())
+    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
+    assertThat(
+      scrollableContentBounds.height.roundToInt(),
+    ).isEqualTo(viewportBounds.height.roundToInt())
+
+    onNodeWithTag("item_7").performScrollTo()
+    onNodeWithTag("item_7").assertIsDisplayed()
+  }
+
+  @Test
+  fun bottomDrawerKeepsLazyColumnWithoutFixedSizeBoundedToVisibleHeight() = runComposeUiTest {
+    var itemCount by mutableStateOf(0)
+
+    setContent {
+      Box(
+        Modifier
+          .requiredSize(400.dp)
+          .testTag("root"),
+      ) {
+        val state = rememberDrawerState(
+          initialSnapPoint = DrawerSnapPoint.Open,
+          snapPoints = {
+            listOf(DrawerSnapPoint.Open)
+          },
+        )
+
+        UnstyledDrawer(
+          state = state,
+          side = DrawerSide.Bottom,
+          modifier = Modifier.fillMaxSize(),
+        ) {
+          Viewport(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("viewport"),
+          ) {
+            Panel(
+              modifier = Modifier
+                .fillMaxWidth()
+                .testTag("panel"),
+            ) {
+              LazyColumn(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .testTag("lazy_content"),
+              ) {
+                items(itemCount) { index ->
+                  BasicText(
+                    text = "item_$index",
+                    modifier = Modifier
+                      .testTag("item_$index")
+                      .fillMaxWidth()
+                      .height(100.dp),
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    runOnIdle {
+      itemCount = 8
+    }
+
+    waitUntil {
+      onNodeWithTag("panel").boundsInRoot().height.roundToInt() == 400
+    }
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+    val lazyContentBounds = onNodeWithTag("lazy_content").boundsInRoot()
+
+    assertThat(panelBounds.top.roundToInt()).isEqualTo(viewportBounds.top.roundToInt())
+    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
+    assertThat(lazyContentBounds.height.roundToInt()).isEqualTo(viewportBounds.height.roundToInt())
+
+    onNodeWithTag("lazy_content").performScrollToIndex(7)
+    onNodeWithTag("item_7").assertIsDisplayed()
   }
 
   @Test

@@ -21,10 +21,8 @@
  */
 package com.composeunstyled.demo
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,6 +37,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -51,7 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,6 +65,7 @@ import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledDrawer
 import com.composeunstyled.Viewport
 import com.composeunstyled.rememberDrawerState
+import kotlin.math.roundToInt
 
 @Composable
 fun DrawerDynamicContentSizeDemo() {
@@ -91,67 +94,62 @@ fun DrawerDynamicContentSizeDemo() {
     },
   )
 
-  UnstyledDrawer(
-    state = drawerState,
-    modifier = Modifier.fillMaxSize(),
-    side = DrawerSide.Bottom,
-    measureContentBeyondViewportBounds = true,
-  ) {
-    Viewport(Modifier.fillMaxSize()) {
-      Panel(
-        modifier = Modifier
-          .fillMaxWidth()
-          .background(Color.White)
-          .border(1.dp, Color.Black),
-      ) {
-        Column(Modifier.fillMaxWidth()) {
-          Column(
+  Column(Modifier.fillMaxSize()) {
+    UnstyledDrawer(
+      state = drawerState,
+      modifier = Modifier
+        .fillMaxWidth()
+        .weight(1f)
+        .clipToBounds(),
+      side = DrawerSide.Bottom,
+    ) {
+      Viewport(Modifier.fillMaxSize()) {
+        Panel(
+          modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .border(1.dp, Color.Black),
+        ) {
+          LazyColumn(
             modifier = Modifier
               .fillMaxWidth()
               .padding(horizontal = 16.dp),
           ) {
-            items.forEachIndexed { index, item ->
-              val visibleState = remember(item.id) {
-                MutableTransitionState(item.isVisible)
+            itemsIndexed(
+              items = items,
+              key = { _, item -> item.id },
+            ) { index, item ->
+              val expansion = remember(item.id) {
+                Animatable(
+                  initialValue = if (item.animateEnter) {
+                    0f
+                  } else {
+                    1f
+                  },
+                )
               }
 
-              LaunchedEffect(item.id) {
-                if (item.isRemoving.not() && item.isVisible.not()) {
-                  items = items.map { currentItem ->
-                    if (currentItem.id == item.id) {
-                      currentItem.copy(isVisible = true)
-                    } else {
-                      currentItem
-                    }
-                  }
-                }
-              }
               LaunchedEffect(item.isVisible) {
-                visibleState.targetState = item.isVisible
-              }
-              LaunchedEffect(
-                item.isRemoving,
-                visibleState.currentState,
-                visibleState.targetState,
-                visibleState.isIdle,
-              ) {
-                if (
-                  item.isRemoving &&
-                  visibleState.isIdle &&
-                  visibleState.currentState.not() &&
-                  visibleState.targetState.not()
-                ) {
+                expansion.animateTo(
+                  targetValue = if (item.isVisible) {
+                    1f
+                  } else {
+                    0f
+                  },
+                  animationSpec = tween(durationMillis = 600),
+                )
+                if (item.isRemoving && item.isVisible.not()) {
                   items = items.filterNot { currentItem ->
                     currentItem.id == item.id
                   }
                 }
               }
 
-              AnimatedVisibility(
-                visibleState = visibleState,
-                enter = expandVertically(expandFrom = Alignment.Top),
-                exit = shrinkVertically(shrinkTowards = Alignment.Top),
-                modifier = Modifier.fillMaxWidth(),
+              Column(
+                Modifier
+                  .fillMaxWidth()
+                  .clipToBounds()
+                  .expandVerticallyBy(expansion.value),
               ) {
                 Column(Modifier.fillMaxWidth()) {
                   if (index == 0) {
@@ -171,71 +169,71 @@ fun DrawerDynamicContentSizeDemo() {
               }
             }
           }
+        }
+      }
+    }
 
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .border(1.dp, Color.Black)
-              .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-          ) {
-            BasicText(
-              text = itemCountLabel,
-              style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Medium),
-            )
-            Row(
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
-              verticalAlignment = Alignment.CenterVertically,
-            ) {
-              UnstyledButton(
-                onClick = {
-                  val itemToRemove = items.lastOrNull { item ->
-                    item.isRemoving.not()
-                  }
-                  if (itemToRemove != null) {
-                    items = items.map { item ->
-                      if (item.id == itemToRemove.id) {
-                        item.copy(isVisible = false, isRemoving = true)
-                      } else {
-                        item
-                      }
-                    }
-                  }
-                },
-                modifier = Modifier
-                  .clip(RoundedCornerShape(10.dp))
-                  .heightIn(32.dp)
-                  .background(Color.White)
-                  .border(1.dp, Color.Black, RoundedCornerShape(10.dp)),
-                contentPadding = PaddingValues(horizontal = 10.dp),
-                indication = LocalIndication.current,
-              ) {
-                BasicText("Remove")
-              }
-
-              UnstyledButton(
-                onClick = {
-                  val itemNumber = nextItemNumber
-                  items = items + DynamicContentItem(
-                    id = itemNumber,
-                    label = itemNumber,
-                    isVisible = false,
-                  )
-                  nextItemNumber += 1
-                },
-                modifier = Modifier
-                  .clip(RoundedCornerShape(10.dp))
-                  .heightIn(32.dp)
-                  .background(Color.White)
-                  .border(1.dp, Color.Black, RoundedCornerShape(10.dp)),
-                contentPadding = PaddingValues(horizontal = 10.dp),
-                indication = LocalIndication.current,
-              ) {
-                BasicText("Add")
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .border(1.dp, Color.Black)
+        .padding(16.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      BasicText(
+        text = itemCountLabel,
+        style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Medium),
+      )
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        UnstyledButton(
+          onClick = {
+            val itemToRemove = items.lastOrNull { item ->
+              item.isRemoving.not()
+            }
+            if (itemToRemove != null) {
+              items = items.map { item ->
+                if (item.id == itemToRemove.id) {
+                  item.copy(isVisible = false, isRemoving = true)
+                } else {
+                  item
+                }
               }
             }
-          }
+          },
+          modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .heightIn(32.dp)
+            .background(Color.White)
+            .border(1.dp, Color.Black, RoundedCornerShape(10.dp)),
+          contentPadding = PaddingValues(horizontal = 10.dp),
+          indication = LocalIndication.current,
+        ) {
+          BasicText("Remove")
+        }
+
+        UnstyledButton(
+          onClick = {
+            val itemNumber = nextItemNumber
+            items = items + DynamicContentItem(
+              id = itemNumber,
+              label = itemNumber,
+              animateEnter = true,
+            )
+            nextItemNumber += 1
+          },
+          modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .heightIn(32.dp)
+            .background(Color.White)
+            .border(1.dp, Color.Black, RoundedCornerShape(10.dp)),
+          contentPadding = PaddingValues(horizontal = 10.dp),
+          indication = LocalIndication.current,
+        ) {
+          BasicText("Add")
         }
       }
     }
@@ -247,4 +245,19 @@ private data class DynamicContentItem(
   val label: Int,
   val isVisible: Boolean = true,
   val isRemoving: Boolean = false,
+  val animateEnter: Boolean = false,
 )
+
+private fun Modifier.expandVerticallyBy(
+  progress: Float,
+): Modifier {
+  return layout { measurable, constraints ->
+    val placeable = measurable.measure(
+      constraints.copy(minHeight = 0),
+    )
+    val animatedHeight = (placeable.height * progress).roundToInt()
+    layout(placeable.width, animatedHeight) {
+      placeable.placeRelative(0, 0)
+    }
+  }
+}
