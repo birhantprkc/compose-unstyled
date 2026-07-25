@@ -438,7 +438,6 @@ class DrawerScope internal constructor(
   internal val drawerState: DrawerState,
   internal val side: DrawerSide,
   internal val enabled: Boolean,
-  internal val measureContentBeyondViewportBounds: Boolean,
 )
 
 class DrawerViewportScope internal constructor()
@@ -449,13 +448,9 @@ private class DrawerContext(
   internal val state: DrawerState? = null,
   internal val side: DrawerSide = DrawerSide.Bottom,
   enabled: Boolean = true,
-  measureContentBeyondViewportBounds: Boolean = false,
   internal val interactionSource: MutableInteractionSource? = null,
 ) {
   internal var enabled by mutableStateOf(enabled)
-  internal var measureContentBeyondViewportBounds by mutableStateOf(
-    measureContentBeyondViewportBounds,
-  )
 }
 
 private val LocalDrawerContext: ProvidableCompositionLocal<DrawerContext> =
@@ -467,7 +462,6 @@ fun UnstyledDrawer(
   modifier: Modifier = Modifier,
   side: DrawerSide = DrawerSide.Start,
   enabled: Boolean = true,
-  measureContentBeyondViewportBounds: Boolean = false,
   content: @Composable DrawerScope.() -> Unit,
 ) {
   if (
@@ -484,12 +478,11 @@ fun UnstyledDrawer(
   }
 
   Box(modifier) {
-    val drawerScope = remember(state, side, enabled, measureContentBeyondViewportBounds) {
+    val drawerScope = remember(state, side, enabled) {
       DrawerScope(
         drawerState = state,
         side = side,
         enabled = enabled,
-        measureContentBeyondViewportBounds = measureContentBeyondViewportBounds,
       )
     }
     drawerScope.content()
@@ -507,13 +500,11 @@ fun DrawerScope.Viewport(
       state = drawerState,
       side = side,
       enabled = enabled,
-      measureContentBeyondViewportBounds = measureContentBeyondViewportBounds,
       interactionSource = interactionSource,
     )
   }
   SideEffect {
     context.enabled = enabled
-    context.measureContentBeyondViewportBounds = measureContentBeyondViewportBounds
   }
   LaunchedEffect(interactionSource) {
     interactionSource.interactions.collect { interaction ->
@@ -655,7 +646,6 @@ fun DrawerViewportScope.Panel(
         targetVisibleMainAxisSize = state?.targetVisiblePanelSizePx()
           ?.takeIf { it.isNaN().not() }
           ?.roundToInt(),
-        measureContentBeyondViewportBounds = context.measureContentBeyondViewportBounds,
         onMainAxisSizeMeasured = { measuredSize ->
           state?.updatePanelSize(measuredSize.toFloat())
         },
@@ -689,7 +679,10 @@ fun DrawerViewportScope.Panel(
     val coercedPanelMainAxisSize = placeables.maxOfOrNull { placeable ->
       placeable.mainAxisSize(side)
     } ?: 0
-    val panelMainAxisSize = coercedPanelMainAxisSize
+    val panelMainAxisSize = state?.panelSizePx
+      ?.takeIf { it.isNaN().not() }
+      ?.roundToInt()
+      ?: coercedPanelMainAxisSize
     state?.updatePanelSize(panelMainAxisSize.toFloat())
 
     val width = if (side.isHorizontal) {
@@ -734,7 +727,6 @@ private fun PanelContentLayout(
   containerMainAxisSize: Int?,
   targetSnapPoint: DrawerSnapPoint?,
   targetVisibleMainAxisSize: Int?,
-  measureContentBeyondViewportBounds: Boolean,
   onMainAxisSizeMeasured: (Int) -> Unit,
   content: @Composable () -> Unit,
 ) {
@@ -755,8 +747,7 @@ private fun PanelContentLayout(
     val explicitlyConstrainedMainAxis = containerMainAxisSize != null &&
       mainAxisMaxSize != Constraints.Infinity &&
       mainAxisMaxSize < containerMainAxisSize
-    val shouldBoundToVisibleSize = measureContentBeyondViewportBounds.not() &&
-      containerMainAxisSize != null &&
+    val shouldBoundToVisibleSize = containerMainAxisSize != null &&
       targetSnapPoint != DrawerSnapPoint.Open &&
       targetVisibleMainAxisSize != null &&
       targetVisibleMainAxisSize > 0 &&
@@ -782,9 +773,10 @@ private fun PanelContentLayout(
     } else {
       constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
     }
-    val effectiveChildConstraints = if (measureContentBeyondViewportBounds) {
-      childConstraints
-    } else if (side.isHorizontal && childConstraints.maxWidth == Constraints.Infinity) {
+    val effectiveChildConstraints = if (
+      side.isHorizontal &&
+      childConstraints.maxWidth == Constraints.Infinity
+    ) {
       childConstraints.copy(
         maxWidth = containerMainAxisSize
           ?: constraints.maxWidth.takeIf { it != Constraints.Infinity }

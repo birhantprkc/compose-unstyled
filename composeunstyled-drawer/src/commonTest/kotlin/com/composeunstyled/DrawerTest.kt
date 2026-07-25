@@ -127,9 +127,9 @@ class DrawerTest {
     val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
     val panelBounds = onNodeWithTag("panel").boundsInRoot()
 
-    assertThat(panelBounds.top.roundToInt()).isEqualTo(-60)
+    assertThat(panelBounds.top.roundToInt()).isEqualTo(0)
     assertThat(panelBounds.bottom.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
-    assertThat(panelBounds.height.roundToInt()).isEqualTo(160)
+    assertThat(panelBounds.height.roundToInt()).isEqualTo(viewportBounds.height.roundToInt())
   }
 
   @Test
@@ -1928,7 +1928,6 @@ private fun EdgeDrawerLayout(
     state = state,
     side = side,
     modifier = Modifier.width(viewportWidth).height(viewportHeight),
-    measureContentBeyondViewportBounds = true,
   ) {
     Viewport(
       modifier = Modifier
@@ -1961,7 +1960,6 @@ private fun DrawerLayoutContent(
     state = state,
     side = DrawerSide.Bottom,
     modifier = Modifier.size(100.dp),
-    measureContentBeyondViewportBounds = true,
   ) {
     Viewport(
       modifier = Modifier
