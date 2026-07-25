@@ -22,16 +22,23 @@
 package com.composeunstyled
 
 import androidx.compose.foundation.OverscrollEffect
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -46,11 +53,14 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.waitUntilExactlyOneExists
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -1244,6 +1254,307 @@ class DrawerTest {
     assertThat(state.currentSnapPoint).isEqualTo(DrawerSnapPoint.Open)
   }
 
+  @Test
+  fun scrollableColumnExpandsToVisibleBottomDrawerHeight() = runComposeUiTest {
+    val peek = DrawerSnapPoint("peek") { containerSize, _ ->
+      containerSize * 0.5f
+    }
+
+    setContent {
+      Box(
+        Modifier
+          .requiredSize(400.dp)
+          .testTag("root"),
+      ) {
+        val state = rememberDrawerState(
+          initialSnapPoint = peek,
+          snapPoints = {
+            listOf(peek, DrawerSnapPoint.Open)
+          },
+        )
+
+        UnstyledDrawer(
+          state = state,
+          side = DrawerSide.Bottom,
+          modifier = Modifier.fillMaxSize(),
+        ) {
+          Viewport(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("viewport"),
+          ) {
+            Panel(Modifier.testTag("panel")) {
+              Column(
+                Modifier
+                  .testTag("scrollable_content")
+                  .verticalScroll(rememberScrollState()),
+              ) {
+                repeat(6) { index ->
+                  BasicText(
+                    text = "item_$index",
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .height(100.dp),
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    waitUntilExactlyOneExists(hasTestTag("viewport"))
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+    val scrollableContentBounds = onNodeWithTag("scrollable_content").boundsInRoot()
+    val visibleDrawerHeight = viewportBounds.bottom - panelBounds.top
+
+    assertThat(visibleDrawerHeight).isEqualTo(viewportBounds.height / 2f)
+    assertThat(scrollableContentBounds.height).isEqualTo(visibleDrawerHeight)
+  }
+
+  @Test
+  fun scrollableColumnExpandsToVisibleTopDrawerHeight() = runComposeUiTest {
+    val peek = DrawerSnapPoint("peek") { containerSize, _ ->
+      containerSize * 0.5f
+    }
+
+    setContent {
+      Box(
+        Modifier
+          .requiredSize(400.dp)
+          .testTag("root"),
+      ) {
+        val state = rememberDrawerState(
+          initialSnapPoint = peek,
+          snapPoints = {
+            listOf(peek, DrawerSnapPoint.Open)
+          },
+        )
+
+        UnstyledDrawer(
+          state = state,
+          side = DrawerSide.Top,
+          modifier = Modifier.fillMaxSize(),
+        ) {
+          Viewport(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("viewport"),
+          ) {
+            Panel(Modifier.testTag("panel")) {
+              Column(
+                Modifier
+                  .testTag("scrollable_content")
+                  .verticalScroll(rememberScrollState()),
+              ) {
+                repeat(6) { index ->
+                  BasicText(
+                    text = "item_$index",
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .height(100.dp),
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    waitUntilExactlyOneExists(hasTestTag("viewport"))
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+    val scrollableContentBounds = onNodeWithTag("scrollable_content").boundsInRoot()
+    val visibleDrawerHeight = panelBounds.bottom - viewportBounds.top
+
+    assertThat(visibleDrawerHeight).isEqualTo(viewportBounds.height / 2f)
+    assertThat(scrollableContentBounds.height).isEqualTo(visibleDrawerHeight)
+  }
+
+  @Test
+  fun scrollableRowExpandsToVisibleStartDrawerWidth() = runComposeUiTest {
+    val peek = DrawerSnapPoint("peek") { containerSize, _ ->
+      containerSize * 0.5f
+    }
+
+    setContent {
+      Box(
+        Modifier
+          .requiredSize(400.dp)
+          .testTag("root"),
+      ) {
+        val state = rememberDrawerState(
+          initialSnapPoint = peek,
+          snapPoints = {
+            listOf(peek, DrawerSnapPoint.Open)
+          },
+        )
+
+        UnstyledDrawer(
+          state = state,
+          side = DrawerSide.Start,
+          modifier = Modifier.fillMaxSize(),
+        ) {
+          Viewport(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("viewport"),
+          ) {
+            Panel(Modifier.testTag("panel")) {
+              Row(
+                Modifier
+                  .testTag("scrollable_content")
+                  .horizontalScroll(rememberScrollState()),
+              ) {
+                repeat(6) { index ->
+                  BasicText(
+                    text = "item_$index",
+                    modifier = Modifier
+                      .fillMaxHeight()
+                      .width(100.dp),
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    waitUntilExactlyOneExists(hasTestTag("viewport"))
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+    val scrollableContentBounds = onNodeWithTag("scrollable_content").boundsInRoot()
+    val visibleDrawerWidth = panelBounds.right - viewportBounds.left
+
+    assertThat(visibleDrawerWidth).isEqualTo(viewportBounds.width / 2f)
+    assertThat(scrollableContentBounds.width).isEqualTo(visibleDrawerWidth)
+  }
+
+  @Test
+  fun scrollableRowExpandsToVisibleEndDrawerWidth() = runComposeUiTest {
+    val peek = DrawerSnapPoint("peek") { containerSize, _ ->
+      containerSize * 0.5f
+    }
+
+    setContent {
+      Box(
+        Modifier
+          .requiredSize(400.dp)
+          .testTag("root"),
+      ) {
+        val state = rememberDrawerState(
+          initialSnapPoint = peek,
+          snapPoints = {
+            listOf(peek, DrawerSnapPoint.Open)
+          },
+        )
+
+        UnstyledDrawer(
+          state = state,
+          side = DrawerSide.End,
+          modifier = Modifier.fillMaxSize(),
+        ) {
+          Viewport(
+            modifier = Modifier
+              .fillMaxSize()
+              .testTag("viewport"),
+          ) {
+            Panel(Modifier.testTag("panel")) {
+              Row(
+                Modifier
+                  .testTag("scrollable_content")
+                  .horizontalScroll(rememberScrollState()),
+              ) {
+                repeat(6) { index ->
+                  BasicText(
+                    text = "item_$index",
+                    modifier = Modifier
+                      .fillMaxHeight()
+                      .width(100.dp),
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    waitUntilExactlyOneExists(hasTestTag("viewport"))
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+    val scrollableContentBounds = onNodeWithTag("scrollable_content").boundsInRoot()
+    val visibleDrawerWidth = viewportBounds.right - panelBounds.left
+
+    assertThat(visibleDrawerWidth).isEqualTo(viewportBounds.width / 2f)
+    assertThat(scrollableContentBounds.width).isEqualTo(visibleDrawerWidth)
+  }
+
+  @Test
+  fun scrollableColumnWithoutFixedHeightDoesNotClipLastItem() = runComposeUiTest {
+    val expanded = DrawerSnapPoint("expanded") { containerSize, _ ->
+      containerSize * 0.7f
+    }
+
+    setContent {
+      Box(
+        Modifier
+          .requiredSize(400.dp)
+          .testTag("root"),
+      ) {
+        val state = rememberDrawerState(
+          initialSnapPoint = expanded,
+          snapPoints = {
+            listOf(DrawerSnapPoint.Closed, expanded)
+          },
+        )
+
+        UnstyledDrawer(
+          state = state,
+          side = DrawerSide.Bottom,
+          modifier = Modifier.fillMaxSize(),
+        ) {
+          Viewport(Modifier.fillMaxSize()) {
+            Panel {
+              Column(
+                Modifier
+                  .testTag("scrollable_content")
+                  .verticalScroll(rememberScrollState()),
+              ) {
+                repeat(10) { index ->
+                  BasicText(
+                    text = "item_$index",
+                    modifier = Modifier
+                      .testTag("item_$index")
+                      .fillMaxWidth()
+                      .height(100.dp),
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    waitUntilExactlyOneExists(hasTestTag("root"))
+
+    onNodeWithTag("item_9").performScrollTo()
+
+    val rootBounds = onNodeWithTag("root").boundsInRoot()
+    val lastItemBounds = onNodeWithTag("item_9").boundsInRoot()
+
+    assertThat(lastItemBounds.bottom <= rootBounds.bottom).isEqualTo(true)
+  }
+
   private fun SemanticsNodeInteraction.boundsInRoot(): Rect {
     return fetchSemanticsNode().boundsInRoot
   }
@@ -1466,6 +1777,7 @@ private fun EdgeDrawerLayout(
     state = state,
     side = side,
     modifier = Modifier.width(viewportWidth).height(viewportHeight),
+    measureContentBeyondViewportBounds = true,
   ) {
     Viewport(
       modifier = Modifier
@@ -1498,6 +1810,7 @@ private fun DrawerLayoutContent(
     state = state,
     side = DrawerSide.Bottom,
     modifier = Modifier.size(100.dp),
+    measureContentBeyondViewportBounds = true,
   ) {
     Viewport(
       modifier = Modifier
