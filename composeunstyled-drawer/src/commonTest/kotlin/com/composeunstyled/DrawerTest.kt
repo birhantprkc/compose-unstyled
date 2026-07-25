@@ -193,9 +193,9 @@ class DrawerTest {
     val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
     val panelBounds = onNodeWithTag("panel").boundsInRoot()
 
-    assertThat(panelBounds.left.roundToInt()).isEqualTo(-40)
+    assertThat(panelBounds.left.roundToInt()).isEqualTo(0)
     assertThat(panelBounds.right.roundToInt()).isEqualTo(120)
-    assertThat(panelBounds.width.roundToInt()).isEqualTo(160)
+    assertThat(panelBounds.width.roundToInt()).isEqualTo(120)
     assertThat(panelBounds.height.roundToInt()).isEqualTo(viewportBounds.height.roundToInt())
   }
 
@@ -952,8 +952,8 @@ class DrawerTest {
     val panelBounds = onNodeWithTag("panel").boundsInRoot()
 
     assertThat(panelBounds.top.roundToInt()).isEqualTo(40)
-    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(140)
-    assertThat(panelBounds.height.roundToInt()).isEqualTo(100)
+    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
+    assertThat(panelBounds.height.roundToInt()).isEqualTo(60)
   }
 
   @Test
@@ -972,7 +972,7 @@ class DrawerTest {
 
     assertThat(contentBottomBounds.bottom.roundToInt())
       .isEqualTo(panelBounds.bottom.roundToInt())
-    assertThat(contentBottomBounds.top.roundToInt()).isEqualTo(130)
+    assertThat(contentBottomBounds.top.roundToInt()).isEqualTo(90)
   }
 
   @Test
@@ -1128,8 +1128,8 @@ class DrawerTest {
     val panelBounds = onNodeWithTag("panel").boundsInRoot()
 
     assertThat(panelBounds.top.roundToInt()).isEqualTo(40)
-    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(140)
-    assertThat(panelBounds.height.roundToInt()).isEqualTo(100)
+    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
+    assertThat(panelBounds.height.roundToInt()).isEqualTo(60)
   }
 
   @Test
@@ -1155,8 +1155,8 @@ class DrawerTest {
     val panelBounds = onNodeWithTag("panel").boundsInRoot()
 
     assertThat(panelBounds.top.roundToInt()).isEqualTo(40)
-    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(140)
-    assertThat(panelBounds.height.roundToInt()).isEqualTo(100)
+    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
+    assertThat(panelBounds.height.roundToInt()).isEqualTo(60)
   }
 
   @Test
@@ -1257,8 +1257,8 @@ class DrawerTest {
     val panelBounds = onNodeWithTag("panel").boundsInRoot()
 
     assertThat(panelBounds.top.roundToInt()).isEqualTo(40)
-    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(140)
-    assertThat(panelBounds.height.roundToInt()).isEqualTo(100)
+    assertThat(panelBounds.bottom.roundToInt()).isEqualTo(viewportBounds.bottom.roundToInt())
+    assertThat(panelBounds.height.roundToInt()).isEqualTo(60)
   }
 
   @Test
