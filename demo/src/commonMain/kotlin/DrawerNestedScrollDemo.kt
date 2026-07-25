@@ -105,12 +105,12 @@ fun DrawerNestedScrollDemo() {
           )
           .background(Color.White)
           .border(1.dp, Color.Black)
-          .fillMaxSize()
-          .padding(12.dp),
+          .fillMaxSize(),
       ) {
         LazyColumn(
           modifier = Modifier.fillMaxSize(),
           verticalArrangement = Arrangement.spacedBy(12.dp),
+          contentPadding = PaddingValues(12.dp),
         ) {
           item {
             BasicText(
