@@ -21,11 +21,10 @@
  */
 package com.composeunstyled.visualregressions
 
+import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.runComposeUiTest
 import assertk.assertThat
 import assertk.assertions.isGreaterThan
@@ -125,34 +124,37 @@ class DrawerVisualRegressionTest {
 
   private fun ComposeUiTest.captureMovedDrawerImage(
     overscrollEffect: ElasticOverscrollEffect,
-  ) = captureVisualRegressionImage(
-    width = 360,
-    height = 640,
-    backgroundColor = DrawerOverscrollBackgroundColor,
-    content = { DrawerOverscrollRegression(overscrollEffect = overscrollEffect) },
+  ) = captureDrawerOverscrollImage(
+    overscrollEffect = overscrollEffect,
     settleAfterInteract = false,
-    interact = {
-      onNodeWithTag(DrawerPanelTag).performTouchInput {
-        down(center)
-        moveTo(topCenter)
-      }
-    },
   )
 
   private fun ComposeUiTest.captureDrawnDrawerImage(
     overscrollEffect: DrawingOverscrollEffect,
-  ) = captureVisualRegressionImage(
-    width = 360,
-    height = 640,
-    backgroundColor = DrawerOverscrollBackgroundColor,
-    content = { DrawerOverscrollRegression(overscrollEffect = overscrollEffect) },
-    interact = {
-      onNodeWithTag(DrawerPanelTag).performTouchInput {
-        down(center)
-        moveTo(topCenter)
-      }
-    },
+  ) = captureDrawerOverscrollImage(
+    overscrollEffect = overscrollEffect,
   )
+
+  private fun ComposeUiTest.captureDrawerOverscrollImage(
+    overscrollEffect: OverscrollEffect,
+    settleAfterInteract: Boolean = true,
+  ): java.awt.image.BufferedImage {
+    mainClock.autoAdvance = false
+    try {
+      return captureVisualRegressionImage(
+        width = 360,
+        height = 640,
+        backgroundColor = DrawerOverscrollBackgroundColor,
+        content = { DrawerOverscrollRegression(overscrollEffect = overscrollEffect) },
+        settleAfterInteract = settleAfterInteract,
+        interact = {
+          performDrawerOverscrollGesture()
+        },
+      )
+    } finally {
+      mainClock.autoAdvance = true
+    }
+  }
 
   private fun nonBackgroundBounds(image: java.awt.image.BufferedImage): PixelBounds {
     var top = image.height

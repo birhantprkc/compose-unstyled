@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
+import assertk.assertions.isGreaterThanOrEqualTo
 import assertk.assertions.isLessThan
 import assertk.assertions.isLessThanOrEqualTo
 import kotlin.math.roundToInt
@@ -192,6 +194,32 @@ class DrawerTest {
   }
 
   @Test
+  fun startStateCanOpenFromViewportEdge() = runComposeUiTest {
+    lateinit var state: DrawerState
+
+    setContent {
+      StartDrawerLayout(
+        initialSnapPoint = DrawerSnapPoint.Closed,
+        onState = { state = it },
+      )
+    }
+
+    waitForIdle()
+
+    onNodeWithTag("viewport").performTouchInput {
+      swipe(
+        start = Offset(1f, centerY),
+        end = Offset(width - 1f, centerY),
+      )
+    }
+    waitUntil {
+      state.currentSnapPoint == DrawerSnapPoint.Open
+    }
+
+    assertThat(state.currentSnapPoint).isEqualTo(DrawerSnapPoint.Open)
+  }
+
+  @Test
   fun startClosedContentIsNotDisplayed() = runComposeUiTest {
     setContent {
       StartDrawerLayout()
@@ -240,6 +268,108 @@ class DrawerTest {
     assertThat(panelBounds.right.roundToInt()).isLessThanOrEqualTo(
       viewportBounds.left.roundToInt(),
     )
+  }
+
+  @Test
+  fun paddedStartDrawerUsesOuterPanelWidthForOpenSnapPoint() = runComposeUiTest {
+    setContent {
+      val state = rememberDrawerState(initialSnapPoint = DrawerSnapPoint.Open)
+
+      UnstyledDrawer(
+        state = state,
+        side = DrawerSide.Start,
+        modifier = Modifier.width(200.dp).height(100.dp),
+      ) {
+        Viewport(
+          modifier = Modifier
+            .width(200.dp)
+            .height(100.dp)
+            .testTag("viewport"),
+        ) {
+          Panel(
+            modifier = Modifier
+              .width(100.dp)
+              .fillMaxHeight()
+              .padding(16.dp)
+              .testTag("panel"),
+          ) {
+            Box(
+              Modifier
+                .fillMaxSize()
+                .testTag("content"),
+            )
+          }
+        }
+      }
+    }
+
+    waitForIdle()
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val contentBounds = onNodeWithTag("content").boundsInRoot()
+
+    assertThat(contentBounds.left.roundToInt()).isEqualTo(
+      viewportBounds.left.roundToInt() + 16,
+    )
+    assertThat(contentBounds.width.roundToInt()).isEqualTo(68)
+  }
+
+  @Test
+  fun openStartDrawerRealignsWhenCallerPanelModifiersChange() = runComposeUiTest {
+    var addPadding by mutableStateOf(false)
+
+    setContent {
+      val state = rememberDrawerState(initialSnapPoint = DrawerSnapPoint.Open)
+      val panelModifier = Modifier
+        .width(100.dp)
+        .fillMaxHeight()
+        .then(
+          if (addPadding) {
+            Modifier.padding(16.dp)
+          } else {
+            Modifier
+          },
+        )
+
+      UnstyledDrawer(
+        state = state,
+        side = DrawerSide.Start,
+        modifier = Modifier.width(200.dp).height(100.dp),
+      ) {
+        Viewport(
+          modifier = Modifier
+            .width(200.dp)
+            .height(100.dp)
+            .testTag("viewport"),
+        ) {
+          Panel(modifier = panelModifier) {
+            Box(
+              Modifier
+                .fillMaxSize()
+                .testTag("content"),
+            )
+          }
+        }
+      }
+    }
+
+    waitForIdle()
+
+    assertThat(onNodeWithTag("content").boundsInRoot().left.roundToInt()).isEqualTo(0)
+    assertThat(onNodeWithTag("content").boundsInRoot().width.roundToInt()).isEqualTo(100)
+
+    runOnIdle {
+      addPadding = true
+    }
+    waitForIdle()
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val contentBounds = onNodeWithTag("content").boundsInRoot()
+
+    assertThat(contentBounds.left.roundToInt()).isEqualTo(
+      viewportBounds.left.roundToInt() + 16,
+    )
+    assertThat(contentBounds.width.roundToInt()).isEqualTo(68)
   }
 
   @Test
@@ -415,6 +545,26 @@ class DrawerTest {
     assertThat(panelBounds.right.roundToInt()).isLessThanOrEqualTo(
       viewportBounds.left.roundToInt(),
     )
+  }
+
+  @Test
+  fun startDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge() = runComposeUiTest {
+    assertDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge(DrawerSide.Start)
+  }
+
+  @Test
+  fun endDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge() = runComposeUiTest {
+    assertDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge(DrawerSide.End)
+  }
+
+  @Test
+  fun topDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge() = runComposeUiTest {
+    assertDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge(DrawerSide.Top)
+  }
+
+  @Test
+  fun bottomDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge() = runComposeUiTest {
+    assertDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge(DrawerSide.Bottom)
   }
 
   @Test
@@ -1044,6 +1194,103 @@ class DrawerTest {
     assertThat(contentBottomBounds.bottom.roundToInt())
       .isEqualTo(panelBounds.bottom.roundToInt())
     assertThat(contentBottomBounds.top.roundToInt()).isEqualTo(90)
+  }
+
+  @Test
+  fun fullSizePanelPlacesContentAtTopStartForEverySide() = runComposeUiTest {
+    listOf(
+      DrawerSide.Start,
+      DrawerSide.End,
+      DrawerSide.Top,
+      DrawerSide.Bottom,
+    ).forEach { side ->
+      setContent {
+        val state = rememberDrawerState(initialSnapPoint = DrawerSnapPoint.Open)
+
+        UnstyledDrawer(
+          state = state,
+          side = side,
+          modifier = Modifier.size(100.dp),
+        ) {
+          Viewport(
+            modifier = Modifier
+              .size(100.dp)
+              .testTag("viewport"),
+          ) {
+            Panel(
+              modifier = Modifier
+                .fillMaxSize()
+                .testTag("panel"),
+            ) {
+              Box(
+                Modifier
+                  .size(10.dp)
+                  .testTag("content"),
+              )
+            }
+          }
+        }
+      }
+
+      waitForIdle()
+
+      val panelBounds = onNodeWithTag("panel").boundsInRoot()
+      val contentBounds = onNodeWithTag("content").boundsInRoot()
+
+      assertThat(contentBounds.left.roundToInt()).isEqualTo(panelBounds.left.roundToInt())
+      assertThat(contentBounds.top.roundToInt()).isEqualTo(panelBounds.top.roundToInt())
+    }
+  }
+
+  @Test
+  fun partialSnapPointDoesNotShrinkPanelContentForEverySide() = runComposeUiTest {
+    val half = DrawerSnapPoint("half") { containerSize, _ -> containerSize * 0.5f }
+
+    listOf(
+      DrawerSide.Start,
+      DrawerSide.End,
+      DrawerSide.Top,
+      DrawerSide.Bottom,
+    ).forEach { side ->
+      setContent {
+        val state = rememberDrawerState(
+          initialSnapPoint = half,
+          snapPoints = { listOf(DrawerSnapPoint.Closed, half, DrawerSnapPoint.Open) },
+        )
+
+        UnstyledDrawer(
+          state = state,
+          side = side,
+          modifier = Modifier.size(100.dp),
+        ) {
+          Viewport(
+            modifier = Modifier
+              .size(100.dp)
+              .testTag("viewport"),
+          ) {
+            Panel(
+              modifier = Modifier
+                .fillMaxSize()
+                .testTag("panel"),
+            ) {
+              Box(
+                Modifier
+                  .fillMaxSize()
+                  .testTag("content"),
+              )
+            }
+          }
+        }
+      }
+
+      waitForIdle()
+
+      val panelBounds = onNodeWithTag("panel").boundsInRoot()
+      val contentBounds = onNodeWithTag("content").boundsInRoot()
+
+      assertThat(contentBounds.width.roundToInt()).isEqualTo(panelBounds.width.roundToInt())
+      assertThat(contentBounds.height.roundToInt()).isEqualTo(panelBounds.height.roundToInt())
+    }
   }
 
   @Test
@@ -1775,6 +2022,109 @@ class DrawerTest {
     val lastItemBounds = onNodeWithTag("item_9").boundsInRoot()
 
     assertThat(lastItemBounds.bottom <= rootBounds.bottom).isEqualTo(true)
+  }
+
+  private suspend fun ComposeUiTest.assertDrawerClosesWhenSwipeStartsFromInnerTrailingPanelEdge(
+    side: DrawerSide,
+  ) {
+    lateinit var state: DrawerState
+    val isHorizontal = side == DrawerSide.Start || side == DrawerSide.End
+    val viewportWidth = if (isHorizontal) {
+      200.dp
+    } else {
+      100.dp
+    }
+    val viewportHeight = if (isHorizontal) {
+      100.dp
+    } else {
+      200.dp
+    }
+
+    setContent {
+      state = rememberDrawerState(initialSnapPoint = DrawerSnapPoint.Open)
+
+      UnstyledDrawer(
+        state = state,
+        side = side,
+        modifier = Modifier.width(viewportWidth).height(viewportHeight),
+      ) {
+        Viewport(
+          modifier = Modifier
+            .width(viewportWidth)
+            .height(viewportHeight)
+            .testTag("viewport"),
+        ) {
+          Panel(
+            modifier = Modifier
+              .width(100.dp)
+              .height(100.dp)
+              .background(Color.White)
+              .border(1.dp, Color.Black)
+              .testTag("panel"),
+          ) {
+            Box(
+              Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .testTag("content"),
+            )
+          }
+        }
+      }
+    }
+
+    waitForIdle()
+
+    onNodeWithTag("viewport").performTouchInput {
+      when (side) {
+        DrawerSide.Start -> swipe(
+          start = Offset(98f, centerY),
+          end = Offset(0f, centerY),
+        )
+
+        DrawerSide.End -> swipe(
+          start = Offset(width - 98f, centerY),
+          end = Offset(width.toFloat(), centerY),
+        )
+
+        DrawerSide.Top -> swipe(
+          start = Offset(centerX, 98f),
+          end = Offset(centerX, 0f),
+        )
+
+        DrawerSide.Bottom -> swipe(
+          start = Offset(centerX, height - 98f),
+          end = Offset(centerX, height.toFloat()),
+        )
+
+        else -> error("Unsupported drawer side: $side")
+      }
+    }
+    waitForIdle()
+
+    assertThat(state.currentSnapPoint).isEqualTo(DrawerSnapPoint.Closed)
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+    when (side) {
+      DrawerSide.Start -> assertThat(panelBounds.right.roundToInt()).isLessThanOrEqualTo(
+        viewportBounds.left.roundToInt(),
+      )
+
+      DrawerSide.End -> assertThat(panelBounds.left.roundToInt()).isGreaterThanOrEqualTo(
+        viewportBounds.right.roundToInt(),
+      )
+
+      DrawerSide.Top -> assertThat(panelBounds.bottom.roundToInt()).isLessThanOrEqualTo(
+        viewportBounds.top.roundToInt(),
+      )
+
+      DrawerSide.Bottom -> assertThat(panelBounds.top.roundToInt()).isGreaterThanOrEqualTo(
+        viewportBounds.bottom.roundToInt(),
+      )
+
+      else -> error("Unsupported drawer side: $side")
+    }
   }
 
   private fun SemanticsNodeInteraction.boundsInRoot(): Rect {

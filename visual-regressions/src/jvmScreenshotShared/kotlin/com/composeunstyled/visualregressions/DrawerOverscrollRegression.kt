@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
@@ -49,6 +50,7 @@ import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import com.composeunstyled.DrawerSide
 import com.composeunstyled.DrawerSnapPoint
 import com.composeunstyled.Panel
 import com.composeunstyled.UnstyledDrawer
@@ -76,6 +78,7 @@ internal fun DrawerOverscrollRegression(
   UnstyledDrawer(
     state = drawerState,
     modifier = Modifier.fillMaxSize(),
+    side = DrawerSide.Bottom,
   ) {
     Viewport(
       modifier = Modifier.fillMaxSize(),
@@ -118,10 +121,7 @@ internal fun updateDrawerOverscrollRegressionScreenshot() = runComposeUiTest {
     content = { DrawerOverscrollRegression(overscrollEffect = overscrollEffect) },
     settleAfterInteract = false,
     interact = {
-      onNodeWithTag(DrawerPanelTag).performTouchInput {
-        down(center)
-        moveTo(topCenter)
-      }
+      performDrawerOverscrollGesture()
     },
   )
   val expectedFile =
@@ -139,16 +139,26 @@ internal fun updateDrawerDrawingOverscrollRegressionScreenshot() = runComposeUiT
     backgroundColor = DrawerOverscrollBackgroundColor,
     content = { DrawerOverscrollRegression(overscrollEffect = overscrollEffect) },
     interact = {
-      onNodeWithTag(DrawerPanelTag).performTouchInput {
-        down(center)
-        moveTo(topCenter)
-      }
+      performDrawerOverscrollGesture()
     },
   )
   val expectedFile =
     File("src/jvmTest/resources/screenshots/$DrawerDrawingOverscrollScreenshotName.png")
   expectedFile.parentFile.mkdirs()
   ImageIO.write(actual, "png", expectedFile)
+}
+
+@OptIn(ExperimentalTestApi::class)
+internal fun ComposeUiTest.performDrawerOverscrollGesture() {
+  mainClock.autoAdvance = false
+  onNodeWithTag(DrawerPanelTag).performTouchInput {
+    down(center)
+  }
+  mainClock.advanceTimeBy(50)
+  onNodeWithTag(DrawerPanelTag).performTouchInput {
+    moveTo(topCenter)
+  }
+  mainClock.advanceTimeBy(50)
 }
 
 internal class DrawingOverscrollEffect(
