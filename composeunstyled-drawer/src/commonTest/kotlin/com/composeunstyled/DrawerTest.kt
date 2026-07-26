@@ -22,6 +22,8 @@
 package com.composeunstyled
 
 import androidx.compose.foundation.OverscrollEffect
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -70,6 +73,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isLessThan
+import assertk.assertions.isLessThanOrEqualTo
 import kotlin.math.roundToInt
 import kotlin.test.Test
 
@@ -163,7 +167,27 @@ class DrawerTest {
     val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
     val panelBounds = onNodeWithTag("panel").boundsInRoot()
 
-    assertThat(panelBounds.right.roundToInt()).isEqualTo(viewportBounds.left.roundToInt())
+    assertThat(panelBounds.right.roundToInt()).isLessThanOrEqualTo(
+      viewportBounds.left.roundToInt(),
+    )
+    assertThat(panelBounds.width.roundToInt()).isEqualTo(100)
+  }
+
+  @Test
+  fun closedStartDrawerPanelStaysInCompositionButOutsideViewport() = runComposeUiTest {
+    setContent {
+      StartDrawerLayout()
+    }
+
+    waitForIdle()
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+
+    onNodeWithTag("panel").assertExists()
+    assertThat(panelBounds.right.roundToInt()).isLessThanOrEqualTo(
+      viewportBounds.left.roundToInt(),
+    )
     assertThat(panelBounds.width.roundToInt()).isEqualTo(100)
   }
 
@@ -176,6 +200,46 @@ class DrawerTest {
     waitForIdle()
 
     onNodeWithTag("content").assertIsNotDisplayed()
+  }
+
+  @Test
+  fun styledStartDrawerIsFullyPastViewportWhenClosed() = runComposeUiTest {
+    setContent {
+      val state = rememberDrawerState(initialSnapPoint = DrawerSnapPoint.Closed)
+
+      UnstyledDrawer(
+        state = state,
+        side = DrawerSide.Start,
+        modifier = Modifier.width(200.dp).height(100.dp),
+      ) {
+        Viewport(
+          modifier = Modifier
+            .width(200.dp)
+            .height(100.dp)
+            .testTag("viewport"),
+        ) {
+          Panel(
+            modifier = Modifier
+              .background(Color.White)
+              .border(1.dp, Color.Black)
+              .width(100.dp)
+              .fillMaxHeight()
+              .testTag("panel"),
+          ) {
+            Box(Modifier.size(20.dp))
+          }
+        }
+      }
+    }
+
+    waitForIdle()
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+
+    assertThat(panelBounds.right.roundToInt()).isLessThanOrEqualTo(
+      viewportBounds.left.roundToInt(),
+    )
   }
 
   @Test
@@ -344,6 +408,13 @@ class DrawerTest {
     waitForIdle()
 
     assertThat(state.currentSnapPoint).isEqualTo(DrawerSnapPoint.Closed)
+
+    val viewportBounds = onNodeWithTag("viewport").boundsInRoot()
+    val panelBounds = onNodeWithTag("panel").boundsInRoot()
+
+    assertThat(panelBounds.right.roundToInt()).isLessThanOrEqualTo(
+      viewportBounds.left.roundToInt(),
+    )
   }
 
   @Test

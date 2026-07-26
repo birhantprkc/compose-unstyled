@@ -567,7 +567,7 @@ fun DrawerScope.Viewport(
         if (side.isHorizontal) {
           val coercionOffset = placeable.mainAxisCoercionOffset(side)
           val x = if (side.isLeadingEdge) {
-            panelMainAxisOffset
+            drawerState.visiblePanelSizePx().roundToInt() - placeable.width
           } else {
             panelMainAxisOffset - maxOf(coercionOffset, trailingEdgeOverflow)
           }
@@ -575,7 +575,7 @@ fun DrawerScope.Viewport(
         } else {
           val coercionOffset = placeable.mainAxisCoercionOffset(side)
           val y = if (side.isLeadingEdge) {
-            panelMainAxisOffset
+            drawerState.visiblePanelSizePx().roundToInt() - placeable.height
           } else {
             panelMainAxisOffset - maxOf(coercionOffset, trailingEdgeOverflow)
           }
@@ -692,7 +692,10 @@ fun DrawerViewportScope.Panel(
     state?.updatePanelSize(panelMainAxisSize.toFloat())
 
     val width = if (side.isHorizontal) {
-      panelMainAxisSize
+      maxOf(
+        panelMainAxisSize,
+        placeables.maxOfOrNull { it.width } ?: 0,
+      )
     } else {
       maxOf(
         constraints.minWidth,
@@ -705,7 +708,10 @@ fun DrawerViewportScope.Panel(
         placeables.maxOfOrNull { it.height } ?: 0,
       )
     } else {
-      panelMainAxisSize
+      maxOf(
+        panelMainAxisSize,
+        placeables.maxOfOrNull { it.height } ?: 0,
+      )
     }
 
     layout(width, height) {
