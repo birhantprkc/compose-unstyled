@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,7 +45,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.composables.icons.lucide.Check
@@ -131,14 +129,13 @@ fun DrawerDynamicSnapPointsDemo() {
       }
     },
     modifier = Modifier
-      .clip(RoundedCornerShape(10.dp))
-      .heightIn(32.dp)
+      .heightIn(36.dp)
       .background(Color.White)
-      .border(1.dp, Color.Black, RoundedCornerShape(10.dp)),
-    contentPadding = PaddingValues(horizontal = 10.dp),
+      .border(1.dp, Color.Black),
+    contentPadding = PaddingValues(horizontal = 14.dp),
     indication = LocalIndication.current,
   ) {
-    BasicText("Open drawer")
+    BasicText("Open Drawer")
   }
 
   UnstyledDrawer(
@@ -151,11 +148,12 @@ fun DrawerDynamicSnapPointsDemo() {
         modifier = Modifier
           .fillMaxSize()
           .background(Color.White)
-          .border(1.dp, Color.Black)
-          .padding(12.dp),
+          .border(1.dp, Color.Black),
       ) {
         Column(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
           BasicText("Enabled Snap Points")

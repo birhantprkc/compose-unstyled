@@ -34,12 +34,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -70,14 +68,13 @@ fun DrawerSideDemo() {
       drawerState.targetSnapPoint = DrawerSnapPoint.Open
     },
     modifier = Modifier
-      .clip(RoundedCornerShape(10.dp))
-      .heightIn(32.dp)
-      .background(Color(0xFFF8FAFC))
-      .border(1.dp, Color(0xFFCACACA), RoundedCornerShape(10.dp)),
-    contentPadding = PaddingValues(horizontal = 10.dp),
+      .heightIn(36.dp)
+      .background(Color.White)
+      .border(1.dp, Color.Black),
+    contentPadding = PaddingValues(horizontal = 14.dp),
     indication = LocalIndication.current,
   ) {
-    BasicText("Open drawer")
+    BasicText("Open Drawer", style = TextStyle(fontWeight = FontWeight.Medium))
   }
 
   UnstyledDrawer(
@@ -88,14 +85,15 @@ fun DrawerSideDemo() {
     Viewport(Modifier.fillMaxSize()) {
       Panel(
         modifier = Modifier
-          .background(Color.White)
-          .border(1.dp, Color.Black)
           .width(360.dp)
           .fillMaxHeight()
-          .padding(12.dp),
+          .background(Color.White)
+          .border(1.dp, Color.Black),
       ) {
         Column(
-          modifier = Modifier.fillMaxWidth(),
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
           verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
           BasicText(
@@ -107,7 +105,9 @@ fun DrawerSideDemo() {
             onClick = {},
             indication = LocalIndication.current,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+              .fillMaxWidth()
+              .border(1.dp, Color.Black),
             contentAlignment = Alignment.CenterStart,
           ) {
             Row(
@@ -122,7 +122,9 @@ fun DrawerSideDemo() {
             onClick = {},
             indication = LocalIndication.current,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+              .fillMaxWidth()
+              .border(1.dp, Color.Black),
             contentAlignment = Alignment.CenterStart,
           ) {
             Row(
@@ -137,7 +139,9 @@ fun DrawerSideDemo() {
             onClick = {},
             indication = LocalIndication.current,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+              .fillMaxWidth()
+              .border(1.dp, Color.Black),
             contentAlignment = Alignment.CenterStart,
           ) {
             Row(
@@ -152,7 +156,9 @@ fun DrawerSideDemo() {
             onClick = {},
             indication = LocalIndication.current,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+              .fillMaxWidth()
+              .border(1.dp, Color.Black),
             contentAlignment = Alignment.CenterStart,
           ) {
             Row(

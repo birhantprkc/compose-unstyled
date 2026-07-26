@@ -135,12 +135,6 @@ private val availablePrimitives = listOf(
     { DrawerSideDemo() },
     previewOptions = PreviewOptions(padding = PaddingValues(0.dp)),
   ),
-  DemoItem(
-    "Drawer Snap Points",
-    "drawer-snap-points",
-    { DrawerSnapPointsDemo() },
-    previewOptions = PreviewOptions(padding = PaddingValues(0.dp)),
-  ),
   DemoItem("Modal Bottom Sheet", "modal-bottom-sheet", { ModalBottomSheetDemo() }),
   DemoItem("Button", "button", { ButtonDemo() }),
   DemoItem("Checkbox", "checkbox", { CheckboxDemo() }),

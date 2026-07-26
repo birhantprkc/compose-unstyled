@@ -33,12 +33,8 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.DrawerSide
@@ -63,19 +59,9 @@ fun DrawerOverscrollEffectDemo() {
     Viewport(Modifier.fillMaxSize()) {
       Panel(
         modifier = Modifier
-          .dropShadow(
-            shape = RectangleShape,
-            shadow = Shadow(
-              radius = 0.dp,
-              color = Color.Black,
-              spread = 0.dp,
-              offset = DpOffset(8.dp, 8.dp),
-              alpha = 0.33f,
-            ),
-          )
+          .fillMaxWidth()
           .background(Color.White)
-          .border(1.dp, Color.Black)
-          .fillMaxWidth(),
+          .border(1.dp, Color.Black),
         overscrollEffect = rememberElasticOverscrollEffect(),
       ) {
         Column(

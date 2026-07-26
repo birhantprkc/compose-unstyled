@@ -37,17 +37,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.shadow.Shadow
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.DrawerSide
 import com.composeunstyled.DrawerSnapPoint
@@ -82,7 +77,7 @@ fun DrawerNestedScrollDemo() {
     contentPadding = PaddingValues(horizontal = 10.dp),
     indication = LocalIndication.current,
   ) {
-    BasicText("Open drawer")
+    BasicText("Open Drawer")
   }
 
   UnstyledDrawer(
@@ -93,19 +88,9 @@ fun DrawerNestedScrollDemo() {
     Viewport(Modifier.fillMaxSize()) {
       Panel(
         modifier = Modifier
-          .dropShadow(
-            shape = RectangleShape,
-            shadow = Shadow(
-              radius = 0.dp,
-              color = Color.Black,
-              spread = 0.dp,
-              offset = DpOffset(8.dp, 8.dp),
-              alpha = 0.33f,
-            ),
-          )
+          .fillMaxSize()
           .background(Color.White)
-          .border(1.dp, Color.Black)
-          .fillMaxSize(),
+          .border(1.dp, Color.Black),
       ) {
         LazyColumn(
           modifier = Modifier.fillMaxSize(),
@@ -130,7 +115,7 @@ fun DrawerNestedScrollDemo() {
               Box(
                 modifier = Modifier
                   .size(40.dp)
-                  .background(Color(0xFFD6D6D6), CircleShape),
+                  .border(1.dp, Color.Black),
               )
               Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -140,19 +125,19 @@ fun DrawerNestedScrollDemo() {
                   modifier = Modifier
                     .fillMaxWidth(if (index % 3 == 0) 0.62f else 0.48f)
                     .height(14.dp)
-                    .background(Color(0xFFBDBDBD)),
+                    .background(Color.Black),
                 )
                 Box(
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(10.dp)
-                    .background(Color(0xFFD6D6D6)),
+                    .border(1.dp, Color.Black),
                 )
                 Box(
                   modifier = Modifier
                     .fillMaxWidth(if (index % 4 == 0) 0.72f else 0.86f)
                     .height(10.dp)
-                    .background(Color(0xFFD6D6D6)),
+                    .border(1.dp, Color.Black),
                 )
               }
             }

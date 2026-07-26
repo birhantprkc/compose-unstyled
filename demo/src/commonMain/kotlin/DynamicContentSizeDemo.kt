@@ -39,7 +39,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,7 +49,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
@@ -205,11 +203,10 @@ fun DrawerDynamicContentSizeDemo() {
             }
           },
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .heightIn(32.dp)
+            .heightIn(36.dp)
             .background(Color.White)
-            .border(1.dp, Color.Black, RoundedCornerShape(10.dp)),
-          contentPadding = PaddingValues(horizontal = 10.dp),
+            .border(1.dp, Color.Black),
+          contentPadding = PaddingValues(horizontal = 14.dp),
           indication = LocalIndication.current,
         ) {
           BasicText("Remove")
@@ -226,11 +223,10 @@ fun DrawerDynamicContentSizeDemo() {
             nextItemNumber += 1
           },
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .heightIn(32.dp)
+            .heightIn(36.dp)
             .background(Color.White)
-            .border(1.dp, Color.Black, RoundedCornerShape(10.dp)),
-          contentPadding = PaddingValues(horizontal = 10.dp),
+            .border(1.dp, Color.Black),
+          contentPadding = PaddingValues(horizontal = 14.dp),
           indication = LocalIndication.current,
         ) {
           BasicText("Add")
